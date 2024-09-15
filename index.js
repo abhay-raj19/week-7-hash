@@ -15,28 +15,44 @@ app.post("/signup", async function(req,res){
     const password = req.body.password;
     const name = req.body.name;
 
-    const hashedPassword = await bcrypt.hash(password,10);
+    const errorThrown = false;
+    try {
+        const hashedPassword = await bcrypt.hash(password,10);
+        console.log(hashedPassword);
 
-    await UserModel.create({
-        email: email,
-        password:hashedPassword,
-        name:name
-    })
-    res.json({
-        msg: "you have logged in"
-    })
+        await UserModel.create({
+            email: email,
+            password:hashedPassword,
+            name:name
+        })
+    } catch(e){
+        console.log("Error while putting in DB");
+        res.json({
+            message: "User Already  exists"
+        })   
+    }
+        
 })
 
 app.post("/signin",async function (req,res) {
     const email = req.body.email;
     const password = req.body.password;
 
-    const user = await UserModel.findOne({
-        email:email,
-        password:password
-    })
 
-    if (user) {
+
+    const user = await UserModel.findOne({
+        email:email
+    })
+    
+    if(!user){
+        res.status(401).json({
+            message: 'User does not exist in our db'
+        })
+        return
+    }
+    const  passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (passwordMatch) {
         const token = jwt.sign({
             id:user._id.toString(),
         },JWT_SECRET);
